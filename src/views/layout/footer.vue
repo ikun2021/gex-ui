@@ -15,20 +15,20 @@ const partFilled = 2
 const allFilled = 3
 const canceled = 4
 
-let symbol ='BTC_USDT'
-let id="0"
-let pageSize=5
+let symbol = 'BTC_USDT'
+let id = "0"
+let pageSize = 10
 const handleCancelOrder = async (index, row) => {
   const res = await cancelOrder({symbol_name: 'BTC_USDT', id: row.id})
   if (res.code === 0) {
     ElMessage.success('取消成功')
   }
 }
-const subOrder=()=>{
+const subOrder = () => {
   if (userStore.isLogin) {
     let d = {'code': 3, 'data': userStore.token}
     wsStore.conn.send(JSON.stringify(d))
-     d = {'code': 5, 'topic':'order@BTC_USDT'}
+    d = {'code': 5, 'topic': 'order@BTC_USDT'}
     wsStore.conn.send(JSON.stringify(d))
   }
 }
@@ -52,8 +52,8 @@ const subOrder=()=>{
         "ca": 1710162241
     }
 }*/
-const orderDataHandler=(resp)=>{
-  switch (resp.p.s){
+const orderDataHandler = (resp) => {
+  switch (resp.p.s) {
     case 1:
       let order = {
         'id': resp.p.id,
@@ -63,14 +63,14 @@ const orderDataHandler=(resp)=>{
         'price': resp.p.p,
         'qty': resp.p.q,
         'amount': resp.p.a,
-        'side': resp.p.si ===1 ? '买':'卖',
+        'side': resp.p.si === 1 ? '买' : '卖',
         'status': resp.p.s,
-        'order_type': resp.p.ot===1? '市价单':'限价单',
+        'order_type': resp.p.ot === 1 ? '市价单' : '限价单',
         'filled_qty': resp.p.fq,
         'filled_amount': resp.p.fa,
         'filled_avg_price': resp.p.fap,
         'created_at': timestampToDateTime(resp.p.ca),
-        'filledUnfilled':resp.p.fq+'/'+resp.p.q,
+        'filledUnfilled': resp.p.fq + '/' + resp.p.q,
       }
       let statusStr = ''
       switch (resp.p.s) {
@@ -87,28 +87,35 @@ const orderDataHandler=(resp)=>{
           statusStr = '订单取消'
           break
       }
-      order.status=statusStr
+      order.status = statusStr
       tableData.unshift(order)
+      if (tableData.length > pageSize) {
+        tableData.pop()
+        showLoading = true
+        id = tableData[tableData.length - 1].id
+        console.log(id)
+      }
+
       break
     case 4:
-      tableData =tableData.filter(el=>{
+      tableData = tableData.filter(el => {
         return el.id !== resp.p.id;
       })
       break
     case 2:
-      tableData.forEach(el=>{
-        el.filledUnfilled = resp.p.fq+'/'+el.qty
+      tableData.forEach(el => {
+        el.filledUnfilled = resp.p.fq + '/' + el.qty
       })
       break
     case 3:
-      tableData = tableData.filter(el=>{
+      tableData = tableData.filter(el => {
         return el.id !== resp.p.id;
       })
   }
 }
 
 wsStore.setOrderDataHandler(orderDataHandler)
-const handleSwitch = async() => {
+const handleSwitch = async () => {
   let s1, s2
   if (activeName === 'current') {
     s1 = newCreated
@@ -117,15 +124,14 @@ const handleSwitch = async() => {
     s1 = allFilled
     s2 = canceled
   }
-  pageSize = 5
-  id="0"
+  id = "0"
 
 
   tableData = await getTableData(s1, s2)
 }
-let loading =$ref(false)
-const loadingMore = async ()=>{
-  loading = true
+let loading = $ref(false)
+const loadingMore = async () => {
+  //loading = true
   let s1, s2
   if (activeName === 'current') {
     s1 = newCreated
@@ -136,9 +142,11 @@ const loadingMore = async ()=>{
   }
   const d = await getTableData(s1, s2)
   tableData.push(...d)
+  //loading = false
+
 }
 
-let showLoading=$ref(false)
+let showLoading = $ref(false)
 
 onMounted(async () => {
   if (!userStore.isLogin) {
@@ -161,13 +169,14 @@ const getTableData = async (...status) => {
   const orderList = await getOrderList({
     status_list: status,
     symbol_name: "BTC_USDT",
-    page_size:pageSize,
-    id:id,
+    page_size: pageSize,
+    id: id,
   })
-  if (orderList.data.order_list.length > 0){
-    id = orderList.data.order_list[orderList.data.order_list.length-1].id
+  if (orderList.data.order_list.length > 0) {
+    id = orderList.data.order_list[orderList.data.order_list.length - 1].id
   }
-  showLoading = orderList.data.order_list.length < orderList.data.total;
+
+  showLoading = orderList.data.order_list.length + tableData.length < orderList.data.total;
 
   return orderList.data.order_list.map((el, i, arr) => {
     el.side = el.side === 1 ? '买' : '卖'
@@ -202,7 +211,9 @@ const getTableData = async (...status) => {
 <template>
   <el-footer style="padding:0">
 
-    <el-tabs  @tab-change="handleSwitch"  class="border-l-4 border-t-4 border-r-4 border-t-gray-500 border-l-gray-500 border-r-gray-500 border-opacity-30 border-solid " v-model="activeName"  >
+    <el-tabs @tab-change="handleSwitch"
+             class="border-l-4 border-t-4 border-r-4 border-t-gray-500 border-l-gray-500 border-r-gray-500 border-opacity-30 border-solid "
+             v-model="activeName">
       <el-tab-pane label="当前委托" class="flex justify-between  items-center" name="current">
         <el-table
             :data="tableData"
@@ -211,12 +222,12 @@ const getTableData = async (...status) => {
           <el-table-column
               prop="created_at"
               label="时间"
-             >
+          >
           </el-table-column>
           <el-table-column
               prop="symbol"
               label="交易对"
-             >
+          >
           </el-table-column>
           <el-table-column
               prop="side"
@@ -264,7 +275,8 @@ const getTableData = async (...status) => {
           </template>
           <template #append>
             <div class="min-w-full " v-if="showLoading">
-              <el-button  type="text" class="min-w-full min-h-10 " :loading="loading" @click="loadingMore">加载更多</el-button>
+              <el-button type="text" class="min-w-full min-h-10 " :loading="loading" @click="loadingMore">加载更多
+              </el-button>
             </div>
           </template>
         </el-table>
@@ -277,12 +289,12 @@ const getTableData = async (...status) => {
           <el-table-column
               prop="created_at"
               label="时间"
-             >
+          >
           </el-table-column>
           <el-table-column
               prop="symbol"
               label="交易对"
-             >
+          >
           </el-table-column>
           <el-table-column
               prop="side"
@@ -324,7 +336,8 @@ const getTableData = async (...status) => {
           </template>
           <template #append>
             <div class="min-w-full " v-if="showLoading">
-              <el-button  type="text" class="min-w-full min-h-10 " :loading="loading" @click="loadingMore">加载更多</el-button>
+              <el-button type="text" class="min-w-full min-h-10 " :loading="loading" @click="loadingMore">加载更多
+              </el-button>
             </div>
           </template>
         </el-table>
@@ -347,7 +360,8 @@ const getTableData = async (...status) => {
   font-weight: normal;
   padding: 0;
 }
-.el-footer{
+
+.el-footer {
 
 }
 
