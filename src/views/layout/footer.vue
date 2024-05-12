@@ -65,11 +65,11 @@ const orderDataHandler=(resp)=>{
         'amount': resp.p.a,
         'side': resp.p.si ===1 ? '买':'卖',
         'status': resp.p.s,
-        'order_type': resp.p.ot,
+        'order_type': resp.p.ot===1? '市价单':'限价单',
         'filled_qty': resp.p.fq,
         'filled_amount': resp.p.fa,
         'filled_avg_price': resp.p.fap,
-        'date': timestampToDateTime(resp.p.ca),
+        'created_at': timestampToDateTime(resp.p.ca),
         'filledUnfilled':resp.p.fq+'/'+resp.p.q,
       }
       let statusStr = ''
@@ -87,6 +87,7 @@ const orderDataHandler=(resp)=>{
           statusStr = '订单取消'
           break
       }
+      order.status=statusStr
       tableData.unshift(order)
       break
     case 4:
@@ -109,7 +110,6 @@ const orderDataHandler=(resp)=>{
 wsStore.setOrderDataHandler(orderDataHandler)
 const handleSwitch = async() => {
   let s1, s2
-  console.log(activeName)
   if (activeName === 'current') {
     s1 = newCreated
     s2 = partFilled
@@ -171,6 +171,7 @@ const getTableData = async (...status) => {
 
   return orderList.data.order_list.map((el, i, arr) => {
     el.side = el.side === 1 ? '买' : '卖'
+    el.created_at = timestampToDateTime(el.created_at)
     el.symbol = el.symbol_name
     el.date = el.created_at
     el.order_type = el.order_type === 1 ? '市价单' : '限价单'
@@ -208,18 +209,24 @@ const getTableData = async (...status) => {
             header-row-class-name="footerTable"
             style="width: 100%">
           <el-table-column
-              prop="date"
+              prop="created_at"
               label="时间"
-              width="150">
+             >
           </el-table-column>
           <el-table-column
               prop="symbol"
               label="交易对"
-              width="180">
+             >
           </el-table-column>
           <el-table-column
               prop="side"
+
               label="方向">
+          </el-table-column>
+          <el-table-column
+              prop="order_type"
+
+              label="订单类型">
           </el-table-column>
           <el-table-column
               prop=price
@@ -268,18 +275,22 @@ const getTableData = async (...status) => {
             header-row-class-name="footerTable"
             style="width: 100%">
           <el-table-column
-              prop="date"
+              prop="created_at"
               label="时间"
-              width="150">
+             >
           </el-table-column>
           <el-table-column
               prop="symbol"
               label="交易对"
-              width="180">
+             >
           </el-table-column>
           <el-table-column
               prop="side"
               label="方向">
+          </el-table-column>
+          <el-table-column
+              prop="order_type"
+              label="订单类型">
           </el-table-column>
           <el-table-column
               prop=price
@@ -294,6 +305,14 @@ const getTableData = async (...status) => {
           <el-table-column
               prop="amount"
               label="委托总额">
+          </el-table-column>
+          <el-table-column
+              prop="filled_qty"
+              label="成交数量">
+          </el-table-column>
+          <el-table-column
+              prop="filled_amount"
+              label="成交金额">
           </el-table-column>
           <el-table-column
               prop="status"

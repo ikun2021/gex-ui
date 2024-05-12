@@ -12,7 +12,7 @@ export function timestampToDateTime(seconds) {
     // 创建一个 Date 对象，将时间戳作为参数传递给构造函数
     let date = new Date(timestamp);
     // 获取年、月、日、时、分、秒等信息
-    let year = date.getFullYear().toString().slice(-2); // 获取年份的后两位
+    let year = date.getFullYear().toString(); // 获取年份的后两位
     let month = (date.getMonth() + 1).toString().padStart(2, '0'); // 月份是从0开始计数的，需要加1
     let day = date.getDate().toString().padStart(2, '0'); // 补齐单个数字的日期
     let hour = date.getHours().toString().padStart(2, '0'); // 补齐单个数字的小时

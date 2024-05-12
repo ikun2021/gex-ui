@@ -1,80 +1,78 @@
 <script setup>
-import {onMounted, ref} from "vue";
-import {createChart} from "lightweight-charts"
 import {getKlineList} from "@/api/system/sys_user.js"
-import { userWebSocket } from "@/store/modules/ws.js"
+import {userWebSocket} from "@/store/modules/ws.js"
+import {onMounted, onUnmounted} from 'vue'
+import {init, dispose, } from 'klinecharts'
+
 const wsStore = userWebSocket()
-let chart
-let lineSeries
-const chartContainer = ref()
+
 let c = [
-    {cycleName:'1分钟',cycleType:1,cycleWs:'Min1'},
-    {cycleName:'5分钟',cycleType:2,cycleWs:'Min5'},
-    {cycleName:'10分钟',cycleType:3,cycleWs:'Min10'},
-    {cycleName:'15分钟',cycleType:4,cycleWs:'Min15'},
-    {cycleName:'30分钟',cycleType:5,cycleWs:'Min30'},
-    {cycleName:'1小时',cycleType:6,cycleWs:'Hour1'},
-    {cycleName:'4小时',cycleType:7,cycleWs:'Hour4'},
-    {cycleName:'1天',cycleType:8,cycleWs:'Day1'},
-    {cycleName:'1周',cycleType:9,cycleWs:'Week1'},
-    {cycleName:'1月',cycleType:10,cycleWs:'Month1'},
+  {cycleName: '1分钟', cycleType: 1, cycleWs: 'Min1'},
+  {cycleName: '5分钟', cycleType: 2, cycleWs: 'Min5'},
+  {cycleName: '10分钟', cycleType: 3, cycleWs: 'Min10'},
+  {cycleName: '15分钟', cycleType: 4, cycleWs: 'Min15'},
+  {cycleName: '30分钟', cycleType: 5, cycleWs: 'Min30'},
+  {cycleName: '1小时', cycleType: 6, cycleWs: 'Hour1'},
+  {cycleName: '4小时', cycleType: 7, cycleWs: 'Hour4'},
+  {cycleName: '1天', cycleType: 8, cycleWs: 'Day1'},
+  {cycleName: '1周', cycleType: 9, cycleWs: 'Week1'},
+  {cycleName: '1月', cycleType: 10, cycleWs: 'Month1'},
 ]
 let cycleList = $ref(c)
 let activeIndex = ref(7)
 let klineData = []
-/*
-*   {
-      time: "2018-10-22",
-      open: 180.82,
-      high: 181.4,
-      low: 177.56,
-      close: 178.75,
-    },*/
+
+onUnmounted(() => {
+  dispose('chart')
+})
 
 onMounted(async () => {
   const d = await getTableData()
   klineData = d.data.kline_list
-  initKline(klineData)
+  initKline()
   subKline()
 })
-const initKline = (data) => {
-  chart = createChart(chartContainer.value)
-  lineSeries = chart.addCandlestickSeries()
-  lineSeries.setData(data)
-  chart.timeScale().fitContent()
+
+const initKline = () => {
+  dispose('chart')
+  const chart = init('chart')
+  chart.applyNewData(klineData)
+
+
+
 }
 const changeBtnStatus = async (index) => {
   activeIndex.value = index
   const d = await getTableData()
   klineData = d.data.kline_list
-  lineSeries.setData(klineData)
+  initKline()
 }
 
 
 const getTableData = async () => {
-  let d =  await getKlineList({
+  let d = await getKlineList({
     start_time: 1,
     end_time: 893185722521,
-    kline_type: activeIndex.value+1,
+    kline_type: activeIndex.value + 1,
     symbol: "BTC_USDT"
   })
 
-  d.data.kline_list.forEach(el=>{
-    el.time = el.start_time
+  d.data.kline_list.forEach(el => {
+    el.timestamp = el.start_time * 1000
     el.open = parseFloat(el.open)
     el.high = parseFloat(el.high)
-    el.low =  parseFloat(el.low)
+    el.low = parseFloat(el.low)
     el.close = parseFloat(el.close)
+    el.volume = parseFloat(el.volume)
   })
-  d.data.kline_list = d.data.kline_list.slice(-30);
   return d
 }
 
 //{"t":"kline@BTC_USDT@Min1","p":{"kt":1,"o":"33.000","h":"33.000","l":"33.000","c":"33.000","v":"0.000","a":"0.0000","st":1709915340,"et":1709915400,"r":"0.000","s":"BTC_USDT"}}
 
-const klineDataHandler =(data)=>{
-    //如果最后一根k线是推送的最后一根k线则更新，否则追加
-  if (klineData[klineData.length-1].start_time === data.p.st) {
+const klineDataHandler = (data) => {
+  //   //如果最后一根k线是推送的最后一根k线则更新，否则追加
+  if (klineData[klineData.length-1].timestamp === data.p.st*1000) {
     klineData[klineData.length-1].open = parseFloat(data.p.o)
     klineData[klineData.length-1].high = parseFloat(data.p.h)
     klineData[klineData.length-1].low = parseFloat(data.p.l)
@@ -85,28 +83,28 @@ const klineDataHandler =(data)=>{
       high:data.p.h,
       low:data.p.l,
       close:data.p.c,
-      time:data.p.start_time,
+      timestamp:data.p.st * 1000,
+      volume:data.p.v,
     }
     klineData.push(d)
   }
-  lineSeries.setData(klineData)
-  chart.timeScale().fitContent()
+  initKline()
 }
 wsStore.setKlineDataHandler(klineDataHandler)
 
-const subKline = ()=>{
+const subKline = () => {
   let k = c[activeIndex.value]
-  const d = {'code': 1, 'topic': 'kline@BTC_USDT@'+k.cycleWs}
+  const d = {'code': 1, 'topic': 'kline@BTC_USDT@' + k.cycleWs}
   wsStore.conn.send(JSON.stringify(d))
 }
 
-const unSubKline = (index)=>{
+const unSubKline = (index) => {
   let k = c[index]
-  const d = {'code': 2, 'topic': 'kline@BTC_USDT@'+k.cycleWs}
+  const d = {'code': 2, 'topic': 'kline@BTC_USDT@' + k.cycleWs}
   wsStore.conn.send(JSON.stringify(d))
 }
 
-watch(()=>activeIndex.value,(newData,oldData) =>{
+watch(() => activeIndex.value, (newData, oldData) => {
   unSubKline(oldData)
   subKline()
 })
@@ -119,7 +117,8 @@ watch(()=>activeIndex.value,(newData,oldData) =>{
     </el-button>
   </div>
 
-  <div class="lw-chart" ref="chartContainer"></div>
+  <div id="chart" class="lw-chart"/>
+
 
 </template>
 
