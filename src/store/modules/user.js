@@ -10,7 +10,8 @@ export const useUserStore = defineStore('user', () => {
   const isLogin = ref(false)
   const userInfo = ref({
     uid: '',
-    username:''
+    username:'',
+    assets:[]
   })
   const token = ref('')
   /* 登录*/

@@ -1,5 +1,5 @@
 <script setup>
-import {cancelOrder, getOrderList} from "@/api/system/sys_user.js";
+import {cancelOrder, getOrderList, getUserAssets} from "@/api/system/sys_user.js";
 import {ElMessage} from "element-plus";
 import {useUserStore} from '@/store/modules/user'
 import {userWebSocket} from "@/store/modules/ws.js";
@@ -52,7 +52,9 @@ const subOrder = () => {
         "ca": 1710162241
     }
 }*/
-const orderDataHandler = (resp) => {
+const orderDataHandler = async (resp) => {
+  const assets = await getUserAssets()
+  userStore.userInfo.assets = assets.data.asset_list
   switch (resp.p.s) {
     case 1:
       let order = {
@@ -93,7 +95,6 @@ const orderDataHandler = (resp) => {
         tableData.pop()
         showLoading = true
         id = tableData[tableData.length - 1].id
-        console.log(id)
       }
 
       break
@@ -218,6 +219,8 @@ const getTableData = async (...status) => {
         <el-table
             :data="tableData"
             header-row-class-name="footerTable"
+            :cell-style="{'border': 'none','padding': '2px 0','font-size':'12px ','height':'1.5rem'}"
+
             style="width: 100%">
           <el-table-column
               prop="created_at"
@@ -285,6 +288,8 @@ const getTableData = async (...status) => {
         <el-table
             :data="tableData"
             header-row-class-name="footerTable"
+            :cell-style="{'border': 'none','padding': '2px 0','font-size':'12px ','height':'1.5rem'}"
+
             style="width: 100%">
           <el-table-column
               prop="created_at"

@@ -4,6 +4,7 @@ import { useTickerStore } from "@/store/modules/ticker";
 const tickerStore = useTickerStore()
 import { storeToRefs } from 'pinia'
 import {useUserStore} from "@/store/modules/user.js";
+
 const userStore = useUserStore()
 const {userInfo}= storeToRefs(userStore)
 const {ticker}=storeToRefs(tickerStore)

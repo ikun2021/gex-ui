@@ -77,6 +77,7 @@ const klineDataHandler = (data) => {
     klineData[klineData.length-1].high = parseFloat(data.p.h)
     klineData[klineData.length-1].low = parseFloat(data.p.l)
     klineData[klineData.length-1].close = parseFloat(data.p.c)
+    klineData[klineData.length-1].volume = parseFloat(data.p.v)
   }else{
     let d ={
       open:data.p.o,
