@@ -88,3 +88,11 @@ export const updateErrorCode = (data) => {
     data,
   })
 }
+
+export const getCaptcha = (data) => {
+  return request({
+    url: '/account/v1/get_captcha',
+    method: 'post',
+    data,
+  })
+}

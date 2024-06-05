@@ -7,7 +7,6 @@ import router from '@/router'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 import { createPersistedState } from 'pinia-plugin-persistedstate';
 import App from './App.vue'
-
 const app = createApp(App)
 app.use(router)
 

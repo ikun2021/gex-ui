@@ -4,12 +4,11 @@ import { useTickerStore } from "@/store/modules/ticker";
 import { userWebSocket } from "@/store/modules/ws.js"
 import {getUserAssets} from "@/api/system/sys_user.js"
 import {useUserStore} from "@/store/modules/user.js";
-import {storeToRefs} from "pinia";
 const userStore =useUserStore()
 const wsStore = userWebSocket()
 const tickerStore = useTickerStore()
 let tableData = $ref([]);
-const {userInfo}=storeToRefs(userStore)
+
 const getTableData = async(symbol) => {
   return await getTickerList({symbol:'BTC_USDT'})
 }
@@ -22,7 +21,8 @@ onMounted(async() => {
 })
 const getAssets=async ()=>{
   const assets = await getUserAssets()
-  userInfo.assets = assets.data.asset_list
+  console.log(assets)
+  userStore.userInfo.assets = assets.data.asset_list
 }
 //{"t":"ticker@BTC_USDT","p":{"lp":"111.000","h":"1111.000","l":"1111.000","a":"16.0000","v":"8220.000","r":"-90.009","s":"BTC_USDT","l24p":"1111.000"}}
 /* {
@@ -85,7 +85,7 @@ const subTicker=()=>{
         header-row-class-name="assetsClassName"
         :cell-style="{'border': 'none','padding': '2px 0','font-size':'12px ','height':'1.5rem'}"
 
-        :data="userInfo.assets"
+        :data="userStore.userInfo.assets"
     >
       <el-table-column fixed prop="coin_name" label="币种" />
       <el-table-column prop="available_qty" label="可用数量" />

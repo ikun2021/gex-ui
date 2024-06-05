@@ -34,6 +34,23 @@
                 maxlength="30"
               />
             </el-form-item>
+            <el-form-item prop="username">
+              <el-input
+                  size="large"
+                  v-model="loginForm.captcha"
+                  placeholder="请输入验证码"
+                  style="width: 60%"
+                  class="mb-2"
+
+              />
+              <div class="vPic">
+                <img
+                    :src="captchaImg"
+                    alt="请输入验证码"
+                    @click="updateCaptcha()"
+                >
+              </div>
+            </el-form-item>
             <el-button
               type="primary"
               style="width: 100%"
@@ -45,6 +62,7 @@
               >{{ buttonName }}</el-button
             >
           </el-form>
+
         </div>
       </div>
     </el-col>
@@ -54,12 +72,19 @@
 <script setup>
 import { useUserStore } from "@/store/modules/user";
 import { ElMessage } from "element-plus";
+import {getCaptcha} from "@/api/system/sys_user.js";
 
 const loginFormRef = $ref({});
-const loginForm = $ref({});
+const loginForm = $ref({
+  username:'',
+  password:'',
+  captcha:'',
+  captcha_id:'',
+});
 let buttonLoading = $ref(false);
 let buttonName = $ref("登 录");
 
+let captchaImg = $ref('');
 const userStore = useUserStore();
 
 const loginRules = reactive({
@@ -74,7 +99,33 @@ function validatePassword(rule, value, callback) {
     callback();
   }
 }
+onMounted(async() => {
+  const result = await getCaptcha()
+  if (result.code!==0){
+    ElMessage({
+      type: "error",
+      message: "获取验证码失败",
+      showClose: true,
+    });
+    return
+  }
+  loginForm.captcha_id=result.data.captcah_id
+  captchaImg=result.data.captcah_pic
+})
 
+const updateCaptcha = async () => {
+  const result = await getCaptcha()
+  if (result.code!==0){
+    ElMessage({
+      type: "error",
+      message: "获取验证码失败",
+      showClose: true,
+    });
+    return
+  }
+  loginForm.captcha_id=result.data.captcah_id
+  captchaImg=result.data.captcah_pic
+}
 const login = async () => {
   return await userStore.LoginIn(loginForm);
 };
@@ -100,5 +151,15 @@ const handleLogin = async () => {
 <style lang="scss" scoped>
 .el-input {
   --el-input-focus-border-color: #1f1f1f;
+}
+.vPic {
+  width: 33%;
+  height: 38px;
+  background: #ccc;
+  img {
+    width: 100%;
+    height: 100%;
+    vertical-align: middle;
+  }
 }
 </style>
