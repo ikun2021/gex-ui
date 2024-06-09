@@ -70,7 +70,7 @@ const submitForm = async(orderType) => {
   }
   let data = {
     symbol_id: 14,
-    symbol_name: 'BTC_USDT',
+    symbol_name: 'IKUN_USDT',
     price: '0',
     qty: '0',
     amount: '',

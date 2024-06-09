@@ -6,7 +6,8 @@ import { emitter } from '@/utils/bus.js'
 
 // 创建axios实例
 const service = axios.create({
-    baseURL:'http://api.gex.com',
+    //baseURL:'http://api.gex.com',
+    baseURL:'http://192.168.2.160',
     timeout: 4000, // 请求超时时间：50s
     headers: { 'Content-Type': 'application/json;charset=utf-8' },
 });

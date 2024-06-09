@@ -15,11 +15,11 @@ const partFilled = 2
 const allFilled = 3
 const canceled = 4
 
-let symbol = 'BTC_USDT'
+let symbol = 'IKUN_USDT'
 let id = "0"
 let pageSize = 10
 const handleCancelOrder = async (index, row) => {
-  const res = await cancelOrder({symbol_name: 'BTC_USDT', id: row.id})
+  const res = await cancelOrder({symbol_name: 'IKUN_USDT', id: row.id})
   if (res.code === 0) {
     ElMessage.success('取消成功')
   }
@@ -28,17 +28,17 @@ const subOrder = () => {
   if (userStore.isLogin) {
     let d = {'code': 3, 'data': userStore.token}
     wsStore.conn.send(JSON.stringify(d))
-    d = {'code': 5, 'topic': 'order@BTC_USDT'}
+    d = {'code': 5, 'topic': 'order@IKUN_USDT'}
     wsStore.conn.send(JSON.stringify(d))
   }
 }
 /*
 * {
-    "t": "order@BTC_USDT",
+    "t": "order@IKUN_USDT",
     "p": {
         "id": "773667510556823552",
         "oi": "751cf55a-893c-479b-84f6-f572490e5ff4",
-        "sn": "BTC_USDT",
+        "sn": "IKUN_USDT",
         "p": "111.000",
         "q": "1.0000",
         "a": "111.000",
@@ -169,7 +169,7 @@ onMounted(async () => {
 const getTableData = async (...status) => {
   const orderList = await getOrderList({
     status_list: status,
-    symbol_name: "BTC_USDT",
+    symbol_name: "IKUN_USDT",
     page_size: pageSize,
     id: id,
   })

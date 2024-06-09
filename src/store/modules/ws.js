@@ -36,7 +36,7 @@ export const userWebSocket = defineStore('webSocketConn', () => {
     const orderTopic = 'order'
     const initConn = async () => {
         conn.value= await new Promise((resolve, reject) => {
-            let socket = new WebSocket("ws://192.168.2.159:9992/ws")
+            let socket = new WebSocket("ws://192.168.2.160/ws")
             socket.onopen = () => {
                 console.log('websocket connect!')
                 resolve(socket)

@@ -54,7 +54,7 @@ const getTableData = async () => {
     start_time: 1,
     end_time: 893185722521,
     kline_type: activeIndex.value + 1,
-    symbol: "BTC_USDT"
+    symbol: "IKUN_USDT"
   })
 
   d.data.kline_list.forEach(el => {
@@ -68,7 +68,7 @@ const getTableData = async () => {
   return d
 }
 
-//{"t":"kline@BTC_USDT@Min1","p":{"kt":1,"o":"33.000","h":"33.000","l":"33.000","c":"33.000","v":"0.000","a":"0.0000","st":1709915340,"et":1709915400,"r":"0.000","s":"BTC_USDT"}}
+//{"t":"kline@IKUN_USDT@Min1","p":{"kt":1,"o":"33.000","h":"33.000","l":"33.000","c":"33.000","v":"0.000","a":"0.0000","st":1709915340,"et":1709915400,"r":"0.000","s":"IKUN_USDT"}}
 
 const klineDataHandler = (data) => {
   //   //如果最后一根k线是推送的最后一根k线则更新，否则追加
@@ -94,14 +94,15 @@ const klineDataHandler = (data) => {
 wsStore.setKlineDataHandler(klineDataHandler)
 
 const subKline = () => {
+  //订阅k线
   let k = c[activeIndex.value]
-  const d = {'code': 1, 'topic': 'kline@BTC_USDT@' + k.cycleWs}
+  const d = {'code': 1, 'topic': 'kline@IKUN_USDT@' + k.cycleWs}
   wsStore.conn.send(JSON.stringify(d))
 }
 
 const unSubKline = (index) => {
   let k = c[index]
-  const d = {'code': 2, 'topic': 'kline@BTC_USDT@' + k.cycleWs}
+  const d = {'code': 2, 'topic': 'kline@IKUN_USDT@' + k.cycleWs}
   wsStore.conn.send(JSON.stringify(d))
 }
 

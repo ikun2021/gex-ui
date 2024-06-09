@@ -7,7 +7,7 @@ const wsStore = userWebSocket()
 let tableData = $ref([])
 const getTableData = async () => {
   return  await getTickList({
-    symbol:'BTC_USDT',
+    symbol:'IKUN_USDT',
     limit:27,
   })
 
@@ -15,7 +15,7 @@ const getTableData = async () => {
 
 
 const subTick = ()=>{
-  const d = {'code': 1, 'topic': 'tick@BTC_USDT'}
+  const d = {'code': 1, 'topic': 'tick@IKUN_USDT'}
   wsStore.conn.send(JSON.stringify(d))
 }
 const tickDataHandler =(data)=>{

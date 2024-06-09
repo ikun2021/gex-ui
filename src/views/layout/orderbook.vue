@@ -24,7 +24,7 @@ let asksMaxQty = $ref( new Decimal(0))
 let bidsMaxQty = $ref(new Decimal(0))
 
 const subDepth = ()=>{
-  const d = {'code': 1, 'topic': 'depth@BTC_USDT'}
+  const d = {'code': 1, 'topic': 'depth@IKUN_USDT'}
   wsStore.conn.send(JSON.stringify(d))
 }
 
@@ -140,7 +140,7 @@ wsStore.setDepthDataHandler(depthDataHandler)
 
 const getTableData = async () => {
   const data =  await getDepthList({
-    symbol:'BTC_USDT',
+    symbol:'IKUN_USDT',
     level:300,
   })
   asksLevel300 = data.data.asks

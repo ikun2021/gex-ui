@@ -109,8 +109,8 @@ onMounted(async() => {
     });
     return
   }
-  loginForm.captcha_id=result.data.captcah_id
-  captchaImg=result.data.captcah_pic
+  loginForm.captcha_id=result.data.captcha_id
+  captchaImg=result.data.captcha_pic
 })
 
 const updateCaptcha = async () => {
@@ -123,8 +123,8 @@ const updateCaptcha = async () => {
     });
     return
   }
-  loginForm.captcha_id=result.data.captcah_id
-  captchaImg=result.data.captcah_pic
+  loginForm.captcha_id=result.data.captcha_id
+  captchaImg=result.data.captcha_pic
 }
 const login = async () => {
   return await userStore.LoginIn(loginForm);

@@ -10,7 +10,7 @@ const tickerStore = useTickerStore()
 let tableData = $ref([]);
 
 const getTableData = async(symbol) => {
-  return await getTickerList({symbol:'BTC_USDT'})
+  return await getTickerList({symbol:'IKUN_USDT'})
 }
 onMounted(async() => {
   const td = await getTableData()
@@ -24,7 +24,7 @@ const getAssets=async ()=>{
   console.log(assets)
   userStore.userInfo.assets = assets.data.asset_list
 }
-//{"t":"ticker@BTC_USDT","p":{"lp":"111.000","h":"1111.000","l":"1111.000","a":"16.0000","v":"8220.000","r":"-90.009","s":"BTC_USDT","l24p":"1111.000"}}
+//{"t":"ticker@IKUN_USDT","p":{"lp":"111.000","h":"1111.000","l":"1111.000","a":"16.0000","v":"8220.000","r":"-90.009","s":"IKUN_USDT","l24p":"1111.000"}}
 /* {
                 "last_price": "111.000",
                 "high": "1111.000",
@@ -33,7 +33,7 @@ const getAssets=async ()=>{
                 "volume": "111.000",
                 "price_range": "-90.009",
                 "last24_price": "1111.000",
-                "symbol": "BTC_USDT"
+                "symbol": "IKUN_USDT"
             }*/
 const tickerHandler=(data)=>{
   tableData.forEach(el=>{
@@ -59,7 +59,7 @@ const tickerHandler=(data)=>{
 wsStore.setTickerDataHandler(tickerHandler)
 
 const subTicker=()=>{
-  const d = {'code': 1, 'topic': 'ticker@BTC_USDT'}
+  const d = {'code': 1, 'topic': 'ticker@IKUN_USDT'}
   wsStore.conn.send(JSON.stringify(d))
 }
 
