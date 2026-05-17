@@ -1,11 +1,5 @@
-# gex前端ui界面
+# Vue 3 + TypeScript + Vite
 
-基于vue3+elementui
+This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
 
-## 登录
-
-![](https://cdn.learnku.com/uploads/images/202403/07/51993/8FD177LqLF.png!large)
-
-## 首页
-
-![](https://cdn.learnku.com/uploads/images/202403/07/51993/iGzITMtilV.png!large)
+Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
