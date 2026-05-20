@@ -202,6 +202,16 @@ export function createOrder(params: CreateOrderParams) {
   return post<Record<string, never>>('/order/v1/create_order', params)
 }
 
+/** 撤单 id 传订单列表中的 order_id（非游标 id） */
+export interface CancelOrderParams {
+  id: string
+  symbol_name: string
+}
+
+export function cancelOrder(params: CancelOrderParams) {
+  return post<Record<string, never>>('/order/v1/cancel_order', params)
+}
+
 export function getOrderList(params: GetOrderListParams) {
   return post<GetOrderListResult>('/order/v1/get_order_list', {
     id: params.id ?? '0',

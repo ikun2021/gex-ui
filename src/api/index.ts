@@ -8,7 +8,19 @@ export {
   type UserAssetItem,
 } from './account'
 export {
+  calcBookMidPrice,
+  DEFAULT_DEPTH_LEVEL,
+  getDepth,
+  getDepthSymbol,
+  mapDepthToOrderBook,
+  type DepthLevel,
+  type GetDepthParams,
+  type GetDepthResult,
+  type OrderBookRow,
+} from './quotes'
+export {
   buildCreateOrderPayload,
+  cancelOrder,
   createOrder,
   CURRENT_ORDER_STATUS_LIST,
   fetchOrderPage,
@@ -21,6 +33,7 @@ export {
   ORDER_TYPE,
   symbolToApi,
   symbolToDisplay,
+  type CancelOrderParams,
   type CreateOrderParams,
   type FetchOrderPageResult,
   type GetOrderListParams,

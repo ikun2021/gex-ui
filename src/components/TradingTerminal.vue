@@ -5,8 +5,11 @@ import {
   CURRENT_ORDER_STATUS_LIST,
   HISTORY_ORDER_STATUS_LIST,
   ORDER_SIDE,
+  type OrderTableRow,
 } from '@/api'
+import { useCancelOrder } from '@/composables/useCancelOrder'
 import { useCreateOrder } from '@/composables/useCreateOrder'
+import { useOrderBookDepth } from '@/composables/useOrderBookDepth'
 import { useOrderListPagination } from '@/composables/useOrderListPagination'
 import { useUserAssets } from '@/composables/useUserAssets'
 import OrderAssetBar from '@/components/OrderAssetBar.vue'
@@ -62,6 +65,14 @@ const {
   submitLimit: submitLimitOrder,
   submitMarket: submitMarketOrder,
 } = useCreateOrder()
+
+const {
+  cancellingId: cancelingOrderId,
+  feedback: cancelFeedback,
+  feedbackOk: cancelFeedbackOk,
+  clearFeedback: clearCancelFeedback,
+  cancel: cancelOpenOrder,
+} = useCancelOrder()
 
 const {
   list: assetList,
@@ -169,23 +180,16 @@ const candles = [
   { o: 58, h: 68, l: 50, c: 62, up: true },
 ]
 
-const asks = [
-  { price: '3.292', amount: '14.2K', total: '46.7K', depth: 78 },
-  { price: '3.291', amount: '9.05K', total: '29.8K', depth: 52 },
-  { price: '3.290', amount: '21.4K', total: '70.4K', depth: 90 },
-  { price: '3.289', amount: '6.12K', total: '20.1K', depth: 38 },
-  { price: '3.288', amount: '11.0K', total: '36.2K', depth: 61 },
-  { price: '3.287', amount: '4.88K', total: '16.0K', depth: 29 },
-]
+const {
+  asks,
+  bids,
+  midPrice: bookMidPrice,
+  loading: depthLoading,
+  error: depthError,
+  load: loadOrderBook,
+} = useOrderBookDepth(() => selectedPair.value)
 
-const bids = [
-  { price: '3.283', amount: '18.6K', total: '61.1K', depth: 72 },
-  { price: '3.282', amount: '7.33K', total: '24.1K', depth: 44 },
-  { price: '3.281', amount: '13.9K', total: '45.6K', depth: 58 },
-  { price: '3.280', amount: '25.1K', total: '82.3K', depth: 95 },
-  { price: '3.279', amount: '5.04K', total: '16.5K', depth: 33 },
-  { price: '3.278', amount: '9.77K', total: '32.0K', depth: 49 },
-]
+const bookCenterPrice = computed(() => bookMidPrice.value || lastPrice)
 
 const lastTrades = [
   { price: '3.284', amount: '420', side: 'buy' as const, time: '14:32:01' },
@@ -234,16 +238,30 @@ onMounted(() => {
   syncOrderPrices()
   void loadCurrentOrders()
   void loadUserAssets()
+  void loadOrderBook()
 })
 
 async function refreshAfterOrder() {
-  await loadUserAssets()
+  await Promise.all([
+    loadUserAssets(),
+    loadOrderBook(),
+    ordersTab.value === 'open' ? loadCurrentOrders() : Promise.resolve(),
+  ])
+}
+
+async function onCancelOrder(row: OrderTableRow) {
+  const ok = await cancelOpenOrder(row.orderId, row.symbol)
+  if (ok) {
+    await refreshAfterOrder()
+  }
 }
 
 watch(selectedPair, () => {
   syncOrderPrices()
   clearOrderFeedback()
+  clearCancelFeedback()
   loadOrdersForTab(ordersTab.value)
+  void loadOrderBook()
 })
 
 watch(orderTypeTab, () => {
@@ -251,6 +269,7 @@ watch(orderTypeTab, () => {
 })
 
 watch(ordersTab, (tab) => {
+  clearCancelFeedback()
   loadOrdersForTab(tab)
 })
 
@@ -846,19 +865,31 @@ async function onMarketSell() {
             <div
               class="text-muted-foreground grid grid-cols-[1fr_1fr_1fr] gap-2 border-b px-3 py-2 text-[11px] font-medium"
             >
-              <span>价格 (USDT)</span>
+              <span>价格 ({{ quoteCurrency }})</span>
               <span class="text-right">
-                数量 (TON)
+                数量 ({{ baseCurrency }})
               </span>
               <span class="text-right">
-                累计 (TON)
+                累计 ({{ baseCurrency }})
               </span>
             </div>
+            <p
+              v-if="depthError"
+              class="text-destructive px-3 py-2 text-[11px]"
+            >
+              {{ depthError }}
+            </p>
+            <p
+              v-else-if="depthLoading && asks.length === 0 && bids.length === 0"
+              class="text-muted-foreground px-3 py-2 text-[11px]"
+            >
+              盘口加载中…
+            </p>
             <ScrollArea class="min-h-0 flex-1">
               <div class="space-y-px pb-2">
                 <div
                   v-for="(row, idx) in asks"
-                  :key="`ask-${idx}`"
+                  :key="`ask-${row.price}-${idx}`"
                   class="relative grid grid-cols-[1fr_1fr_1fr] gap-2 px-3 py-0.5 text-[11px] leading-tight tabular-nums"
                 >
                   <div
@@ -877,14 +908,14 @@ async function onMarketSell() {
               <div
                 class="flex flex-col items-center gap-0.5 py-2"
               >
-                <span class="text-lg font-semibold tabular-nums" :style="{ color: okxUp }">{{ lastPrice }}</span>
+                <span class="text-lg font-semibold tabular-nums" :style="{ color: okxUp }">{{ bookCenterPrice }}</span>
                 <span class="text-muted-foreground text-[10px] tabular-nums">指数 {{ statsRow[1]?.value }}</span>
               </div>
               <Separator class="bg-[#2b2b43]" />
               <div class="space-y-px pt-px pb-4">
                 <div
                   v-for="(row, idx) in bids"
-                  :key="`bid-${idx}`"
+                  :key="`bid-${row.price}-${idx}`"
                   class="relative grid grid-cols-[1fr_1fr_1fr] gap-2 px-3 py-0.5 text-[11px] leading-tight tabular-nums"
                 >
                   <div
@@ -951,6 +982,13 @@ async function onMarketSell() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="open" class="mt-0">
+            <p
+              v-if="cancelFeedback"
+              class="mb-2 rounded-md px-2 py-1.5 text-[11px]"
+              :class="cancelFeedbackOk ? 'bg-[#00d395]/15 text-[#00d395]' : 'bg-[#f6465d]/15 text-[#f6465d]'"
+            >
+              {{ cancelFeedback }}
+            </p>
             <p
               v-if="currentOrdersError"
               class="text-destructive mb-2 text-[11px]"
@@ -1044,8 +1082,10 @@ async function onMarketSell() {
                           variant="outline"
                           size="sm"
                           class="border-[#f7931a]/50 bg-[#f7931a]/15 text-[#f7931a] hover:bg-[#f7931a]/25 h-7 px-2 text-[11px] leading-none"
+                          :disabled="!!cancelingOrderId"
+                          @click="onCancelOrder(o)"
                         >
-                          撤单
+                          {{ cancelingOrderId === o.orderId ? '撤单中…' : '撤单' }}
                         </Button>
                       </span>
                     </TableCell>
