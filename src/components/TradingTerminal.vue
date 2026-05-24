@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ChevronDown, Search, Crosshair, Minus, PenLine } from 'lucide-vue-next'
+import { Search, Crosshair, Minus, PenLine } from 'lucide-vue-next'
 import {
   CURRENT_ORDER_STATUS_LIST,
   HISTORY_ORDER_STATUS_LIST,
+  KLINE_TIMEFRAMES,
   ORDER_SIDE,
+  symbolToDisplay,
   type OrderTableRow,
 } from '@/api'
 import { useCancelOrder } from '@/composables/useCancelOrder'
 import { useCreateOrder } from '@/composables/useCreateOrder'
+import { useKlineList } from '@/composables/useKlineList'
+import { useTickList } from '@/composables/useTickList'
+import { useTicker } from '@/composables/useTicker'
 import { useOrderBookDepth } from '@/composables/useOrderBookDepth'
 import { useOrderListPagination } from '@/composables/useOrderListPagination'
 import { useUserAssets } from '@/composables/useUserAssets'
+import KlineChart from '@/components/KlineChart.vue'
 import OrderAssetBar from '@/components/OrderAssetBar.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader } from '@/components/ui/card'
@@ -40,7 +46,10 @@ const orderHeadRowClass =
 const orderBodyRowClass =
   'border-border hover:bg-muted/20 h-11 border-b [&>td]:h-11 [&>td]:max-h-11 [&>td]:min-h-11 [&>td]:!px-3 [&>td]:!py-0 [&>td]:align-middle [&>td]:leading-none'
 
-const selectedPair = ref('IKUN/USDT')
+/** 现货固定交易对 */
+const SPOT_PAIR = 'IKUN/USDT'
+
+const selectedPair = ref(SPOT_PAIR)
 const ordersTab = ref('open')
 const orderTypeTab = ref('limit')
 const tfActive = ref('15m')
@@ -125,7 +134,7 @@ const maxBuyBaseDisplay = computed(() => {
   if (assetsLoading.value)
     return '…'
   const quote = Number(availableOf(quoteCurrency.value))
-  const price = Number(buyPrice.value || lastPrice)
+  const price = Number(buyPrice.value || displayPrice.value)
   if (Number.isNaN(quote) || !price || price <= 0)
     return '—'
   return formatAssetQty(String(quote / price))
@@ -136,49 +145,78 @@ const maxSellDisplay = computed(() => {
   return assetsLoading.value ? '…' : formatAssetQty(availableOf(baseCurrency.value))
 })
 
-const timeframes = ['分时', '1s', '1m', '5m', '15m', '1H', '4H', '1D', '1W']
+const timeframes = KLINE_TIMEFRAMES
 
-const categories = ['自选', '现货', '合约', '热门', '涨幅榜', 'AI', 'Meme', 'DeFi', 'Layer1']
+const {
+  ticker,
+  loading: tickerLoading,
+  error: tickerError,
+  load: loadTicker,
+  formatTickerPrice,
+  formatTickerChangePct,
+  isTickerChangeUp,
+} = useTicker(() => SPOT_PAIR)
 
-const marketPairs = [
-  { sym: 'BTC/USDT', price: '97,842.1', chg: '+0.52%', up: true },
-  { sym: 'ETH/USDT', price: '3,521.60', chg: '-0.18%', up: false },
-  { sym: 'TON/USDT', price: '3.2840', chg: '+2.31%', up: true },
-  { sym: 'SOL/USDT', price: '178.42', chg: '+1.05%', up: true },
-  { sym: 'DOGE/USDT', price: '0.16241', chg: '-0.76%', up: false },
-  { sym: 'XRP/USDT', price: '2.3184', chg: '+0.09%', up: true },
-  { sym: 'PEPE/USDT', price: '0.00000982', chg: '+4.12%', up: true },
-  { sym: 'IKUN/USDT', price: '1.0000', chg: '+0.00%', up: true },
-]
+/** 左侧现货列表（仅 IKUN/USDT，数据来自 ticker） */
+const spotMarketRows = computed(() => {
+  const t = ticker.value
+  if (!t) {
+    return [{ sym: SPOT_PAIR, price: tickerLoading.value ? '…' : '—', chg: '—', up: true }]
+  }
+  return [{
+    sym: symbolToDisplay(t.symbol) || SPOT_PAIR,
+    price: formatTickerPrice(t.last_price),
+    chg: formatTickerChangePct(t),
+    up: isTickerChangeUp(t),
+  }]
+})
 
-const lastPrice = '3.2840'
-const changePct = '+2.31%'
+const statsRow = computed(() => {
+  const t = ticker.value
+  const base = baseCurrency.value
+  const quote = quoteCurrency.value
+  if (!t) {
+    return [
+      { label: '24h 最高', value: '—' },
+      { label: '24h 最低', value: '—' },
+      { label: `24h 量 (${base})`, value: '—' },
+      { label: `24h 额 (${quote})`, value: '—' },
+    ]
+  }
+  return [
+    { label: '24h 最高', value: formatTickerPrice(t.high) },
+    { label: '24h 最低', value: formatTickerPrice(t.low) },
+    { label: `24h 量 (${base})`, value: formatTickerPrice(t.amount) },
+    { label: `24h 额 (${quote})`, value: formatTickerPrice(t.volume) },
+  ]
+})
 
-const statsRow = [
-  { label: '标记价格', value: '3.2836' },
-  { label: '指数价格', value: '3.2848' },
-  { label: '24h 最低', value: '3.1021' },
-  { label: '24h 最高', value: '3.3180' },
-  { label: '24h 量 (TON)', value: '18.24M' },
-  { label: '24h 额 (USDT)', value: '58.93M' },
-]
+const {
+  klineItems,
+  lastClose: klineLastClose,
+  changePct: klineChangePct,
+  loading: klineLoading,
+  error: klineError,
+  load: loadKline,
+} = useKlineList(() => selectedPair.value, () => tfActive.value)
 
-const chartLabels = ['14:00', '18:00', '22:00', '02:00', '06:00', '10:00', '14:00']
+const displayPrice = computed(() => {
+  if (ticker.value?.last_price)
+    return formatTickerPrice(ticker.value.last_price)
+  return klineLastClose.value || '—'
+})
 
-const candles = [
-  { o: 42, h: 58, l: 38, c: 52, up: true },
-  { o: 52, h: 55, l: 40, c: 44, up: false },
-  { o: 44, h: 62, l: 42, c: 58, up: true },
-  { o: 58, h: 68, l: 50, c: 54, up: false },
-  { o: 54, h: 72, l: 52, c: 68, up: true },
-  { o: 68, h: 78, l: 58, c: 62, up: false },
-  { o: 62, h: 76, l: 54, c: 72, up: true },
-  { o: 72, h: 82, l: 62, c: 66, up: false },
-  { o: 66, h: 74, l: 52, c: 56, up: false },
-  { o: 56, h: 70, l: 48, c: 64, up: true },
-  { o: 64, h: 74, l: 56, c: 58, up: false },
-  { o: 58, h: 68, l: 50, c: 62, up: true },
-]
+const displayChangePct = computed(() => {
+  if (ticker.value)
+    return formatTickerChangePct(ticker.value)
+  return klineChangePct.value || '0.00%'
+})
+
+const displayChangeUp = computed(() => {
+  if (ticker.value)
+    return isTickerChangeUp(ticker.value)
+  return !displayChangePct.value.startsWith('-')
+})
 
 const {
   asks,
@@ -189,15 +227,17 @@ const {
   load: loadOrderBook,
 } = useOrderBookDepth(() => selectedPair.value)
 
-const bookCenterPrice = computed(() => bookMidPrice.value || lastPrice)
+const bookCenterPrice = computed(() => bookMidPrice.value || displayPrice.value)
 
-const lastTrades = [
-  { price: '3.284', amount: '420', side: 'buy' as const, time: '14:32:01' },
-  { price: '3.283', amount: '1.02K', side: 'sell' as const, time: '14:32:01' },
-  { price: '3.284', amount: '356', side: 'buy' as const, time: '14:31:58' },
-  { price: '3.282', amount: '8.41K', side: 'sell' as const, time: '14:31:57' },
-  { price: '3.285', amount: '612', side: 'buy' as const, time: '14:31:55' },
-]
+const {
+  trades: lastTrades,
+  loading: tickLoading,
+  error: tickError,
+  load: loadTickList,
+  startPoll: startTickPoll,
+} = useTickList(() => SPOT_PAIR)
+
+const rightBookTab = ref('book')
 
 const {
   items: currentOrderItems,
@@ -235,16 +275,20 @@ function loadOrdersForTab(tab: string) {
 }
 
 onMounted(() => {
+  void loadTickList()
+  startTickPoll()
   syncOrderPrices()
   void loadCurrentOrders()
   void loadUserAssets()
-  void loadOrderBook()
 })
 
 async function refreshAfterOrder() {
   await Promise.all([
+    loadTicker(),
+    loadTickList(),
     loadUserAssets(),
     loadOrderBook(),
+    loadKline(),
     ordersTab.value === 'open' ? loadCurrentOrders() : Promise.resolve(),
   ])
 }
@@ -261,8 +305,15 @@ watch(selectedPair, () => {
   clearOrderFeedback()
   clearCancelFeedback()
   loadOrdersForTab(ordersTab.value)
-  void loadOrderBook()
 })
+
+watch(
+  () => ticker.value?.last_price ?? klineLastClose.value,
+  (price) => {
+    if (price)
+      syncOrderPrices()
+  },
+)
 
 watch(orderTypeTab, () => {
   clearOrderFeedback()
@@ -273,21 +324,17 @@ watch(ordersTab, (tab) => {
   loadOrdersForTab(tab)
 })
 
-function candleBodyHeight(c: (typeof candles)[number]) {
-  return Math.max(0.8, Math.abs(c.c - c.o))
-}
-
-function candleBodyTop(c: (typeof candles)[number]) {
-  return 100 - Math.max(c.o, c.c)
-}
-
 function selectPair(sym: string) {
-  selectedPair.value = sym
+  if (sym === SPOT_PAIR)
+    selectedPair.value = sym
 }
 
 function syncOrderPrices() {
-  buyPrice.value = lastPrice
-  sellPrice.value = lastPrice
+  const price = ticker.value?.last_price || klineLastClose.value
+  if (!price)
+    return
+  buyPrice.value = price
+  sellPrice.value = price
 }
 
 async function onLimitBuy() {
@@ -373,18 +420,12 @@ async function onMarketSell() {
                 class="border-border focus-visible:ring-[#474d57] h-8 border bg-[#141414] pr-2 pl-9 text-xs"
               />
             </div>
-            <div
-              class="flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              <Button
-                v-for="c in categories"
-                :key="c"
-                variant="ghost"
-                size="sm"
-                class="text-muted-foreground hover:text-foreground h-7 shrink-0 rounded px-2.5 text-[11px]"
+            <div class="pb-1">
+              <span
+                class="bg-accent text-foreground inline-flex h-7 items-center rounded px-2.5 text-[11px] font-medium"
               >
-                {{ c }}
-              </Button>
+                现货
+              </span>
             </div>
             <ScrollArea class="min-h-0 flex-1">
               <Table>
@@ -407,7 +448,7 @@ async function onMarketSell() {
                 </TableHeader>
                 <TableBody>
                   <TableRow
-                    v-for="row in marketPairs"
+                    v-for="row in spotMarketRows"
                     :key="row.sym"
                     class="border-border hover:bg-accent/40 cursor-pointer border-0"
                     :class="
@@ -486,22 +527,22 @@ async function onMarketSell() {
         <header
           class="border-border flex flex-wrap items-center gap-x-5 gap-y-2 border-b px-3 py-2"
         >
-          <Button
-            variant="ghost"
-            class="hover:bg-accent h-auto gap-1 px-1 py-0 text-base font-semibold"
-          >
-            {{ selectedPair }}
-            <ChevronDown class="size-4 opacity-60" />
-          </Button>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-semibold">{{ SPOT_PAIR }}</span>
+            <span
+              v-if="tickerError"
+              class="text-[11px] text-[#f6465d]"
+            >{{ tickerError }}</span>
+          </div>
           <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1">
             <span
               class="text-xl font-semibold tabular-nums"
               :style="{ color: okxUp }"
-            >{{ lastPrice }}</span>
+            >{{ displayPrice }}</span>
             <span
               class="text-sm font-medium tabular-nums"
-              :style="{ color: okxUp }"
-            >{{ changePct }}</span>
+              :style="{ color: displayChangeUp ? okxUp : okxDown }"
+            >{{ displayChangePct }}</span>
           </div>
           <div
             class="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]"
@@ -548,76 +589,14 @@ async function onMarketSell() {
               <Minus class="text-muted-foreground size-4 opacity-80" />
               <PenLine class="text-muted-foreground size-4 opacity-80" />
             </div>
-            <div class="flex min-h-0 min-w-0 flex-1 flex-col bg-black">
-              <div class="relative min-h-[420px] flex-1">
-                <svg
-                  class="text-[#2b2b43] absolute inset-2 h-[calc(100%-1.25rem)] w-[calc(100%-1rem)]"
-                  preserveAspectRatio="none"
-                  viewBox="0 0 100 100"
-                >
-                  <g opacity="0.9">
-                    <line
-                      v-for="i in 5"
-                      :key="`h-${i}`"
-                      stroke="currentColor"
-                      stroke-width="0.12"
-                      x1="0"
-                      :x2="100"
-                      :y1="i * 20"
-                      :y2="i * 20"
-                    />
-                    <line
-                      v-for="i in 8"
-                      :key="`v-${i}`"
-                      stroke="currentColor"
-                      stroke-width="0.12"
-                      :x1="i * 12.5"
-                      :x2="i * 12.5"
-                      y1="0"
-                      y2="100"
-                    />
-                  </g>
-                  <line
-                    :stroke="okxDown"
-                    stroke-dasharray="1.5 2"
-                    stroke-width="0.35"
-                    x1="0"
-                    x2="100"
-                    y1="52"
-                    y2="52"
-                  />
-                  <g>
-                    <g
-                      v-for="(c, i) in candles"
-                      :key="i"
-                      :transform="`translate(${6 + i * 7.2}, 0)`"
-                    >
-                      <line
-                        :stroke="c.up ? okxUp : okxDown"
-                        stroke-width="0.45"
-                        x1="3"
-                        x2="3"
-                        :y1="100 - c.h"
-                        :y2="100 - c.l"
-                      />
-                      <rect
-                        :fill="c.up ? okxUp : okxDown"
-                        :height="candleBodyHeight(c)"
-                        rx="0.2"
-                        width="5"
-                        :y="candleBodyTop(c)"
-                        x="0.5"
-                      />
-                    </g>
-                  </g>
-                </svg>
-                <div
-                  class="text-muted-foreground pointer-events-none absolute inset-x-3 bottom-1 flex justify-between text-[10px] tabular-nums"
-                >
-                  <span v-for="lab in chartLabels" :key="lab">{{ lab }}</span>
-                </div>
-              </div>
-            </div>
+            <KlineChart
+              class="min-h-[420px] flex-1 bg-black"
+              :items="klineItems"
+              :loading="klineLoading"
+              :error="klineError"
+              :up-color="okxUp"
+              :down-color="okxDown"
+            />
           </div>
         </div>
 
@@ -849,7 +828,7 @@ async function onMarketSell() {
 
       <!-- 右侧：订单簿 / 成交 -->
       <aside class="border-border bg-background flex w-[292px] shrink-0 flex-col border-l">
-        <Tabs default-value="book" class="flex min-h-0 flex-1 flex-col px-0 pt-2">
+        <Tabs v-model="rightBookTab" default-value="book" class="flex min-h-0 flex-1 flex-col px-0 pt-2">
           <TabsList class="bg-muted/50 mx-2 mb-2 grid h-8 shrink-0 grid-cols-2 rounded-md p-0.5">
             <TabsTrigger value="book" class="text-[11px]">
               订单簿
@@ -947,10 +926,28 @@ async function onMarketSell() {
                 时间
               </span>
             </div>
+            <p
+              v-if="tickError"
+              class="text-destructive px-3 py-2 text-[11px]"
+            >
+              {{ tickError }}
+            </p>
+            <p
+              v-else-if="tickLoading && lastTrades.length === 0"
+              class="text-muted-foreground px-3 py-2 text-[11px]"
+            >
+              加载中…
+            </p>
+            <p
+              v-else-if="!tickLoading && lastTrades.length === 0"
+              class="text-muted-foreground px-3 py-2 text-[11px]"
+            >
+              暂无成交
+            </p>
             <ScrollArea class="min-h-0 flex-1">
               <div
                 v-for="(t, i) in lastTrades"
-                :key="i"
+                :key="`${t.time}-${t.price}-${i}`"
                 class="grid grid-cols-[1fr_1fr_auto] gap-2 px-3 py-0.5 text-[11px] tabular-nums"
               >
                 <span
