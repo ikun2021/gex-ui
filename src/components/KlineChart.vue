@@ -23,7 +23,7 @@ const downColor = computed(() => props.downColor ?? '#f6465d')
 const chartRef = ref<HTMLElement | null>(null)
 const svgRef = ref<SVGSVGElement | null>(null)
 const visibleCount = ref(CHART_VISIBLE_DEFAULT)
-const viewStart = ref(0)
+const viewStart = ref(-1)
 const dragging = ref(false)
 const dragLastX = ref(0)
 const hoverIndex = ref<number | null>(null)
@@ -89,12 +89,16 @@ function updateHoverIndex(e: PointerEvent) {
 
 watch(
   () => props.items.length,
-  (len, prev) => {
+  (len) => {
     if (len === 0) {
-      viewStart.value = 0
+      viewStart.value = -1
       return
     }
-    if (prev === undefined || viewStart.value >= maxStart.value) {
+    if (viewStart.value < 0) {
+      viewStart.value = maxStart.value
+      return
+    }
+    if (viewStart.value >= maxStart.value) {
       viewStart.value = maxStart.value
     }
     else {

@@ -1,5 +1,13 @@
-import { getStoredToken } from './token'
+import { clearAuthToken, getStoredToken } from './token'
 import { ApiError, type ApiResponse } from './types'
+
+const AUTH_EXPIRED_CODES = new Set([200003, 200004])
+type AuthExpiredCallback = () => void
+let _onAuthExpired: AuthExpiredCallback | null = null
+
+export function onAuthExpired(cb: AuthExpiredCallback) {
+  _onAuthExpired = cb
+}
 
 export interface RequestConfig extends Omit<RequestInit, 'body'> {
   /** JSON 请求体，自动序列化 */
@@ -88,6 +96,10 @@ export async function request<T>(
     return payload as unknown as T
 
   if (payload.code !== 0) {
+    if (AUTH_EXPIRED_CODES.has(payload.code)) {
+      clearAuthToken()
+      _onAuthExpired?.()
+    }
     throw new ApiError(payload.code, payload.msg || '请求失败', payload)
   }
 
