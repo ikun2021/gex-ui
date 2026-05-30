@@ -19,6 +19,14 @@ export function buildDepthWsTopic(symbolApi: string) {
   return `depth@${symbolApi}`
 }
 
+/** 本地已同步版本是否与 WS 推送的 lv 连续 */
+export function isDepthVersionMatched(
+  localVersion: string,
+  wsLastVersion: string,
+) {
+  return localVersion !== '' && localVersion === wsLastVersion
+}
+
 export function parseWsDepthMessage(raw: unknown): WsDepthMessage | null {
   let data = raw
   if (typeof data === 'string') {

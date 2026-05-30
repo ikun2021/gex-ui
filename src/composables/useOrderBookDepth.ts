@@ -4,6 +4,7 @@ import {
   applyDepthSideDelta,
   buildDepthWsTopic,
   depthLevelsFromMap,
+  isDepthVersionMatched,
   levelsToDepthMap,
   parseWsDepthMessage,
   trimDepthLevels,
@@ -31,7 +32,9 @@ export function useOrderBookDepth(
 
   const ws = getGexWs()
   let subscribedTopic = ''
+  /** HTTP 快照或上一笔 WS 推送的 cv，下一笔 WS 的 lv 必须等于它 */
   let currentVersion = ''
+  let resyncing = false
   const askBook = new Map<string, DepthLevel>()
   const bidBook = new Map<string, DepthLevel>()
 
@@ -59,14 +62,35 @@ export function useOrderBookDepth(
     publishBook()
   }
 
+  async function resyncFromHttp() {
+    if (resyncing)
+      return
+    resyncing = true
+    try {
+      await loadSnapshot()
+    }
+    finally {
+      resyncing = false
+    }
+  }
+
   function onWsMessage(raw: unknown) {
     const msg = parseWsDepthMessage(raw)
     if (!msg || msg.t !== subscribedTopic)
       return
 
     const payload = msg.p
-    if (currentVersion && payload.lv !== currentVersion) {
-      void load()
+    const symbol = getDepthSymbol(getSymbol())
+    if (payload.s && payload.s !== symbol)
+      return
+
+    // 尚未完成 HTTP 快照，忽略 WS 增量
+    if (!currentVersion)
+      return
+
+    // lv 必须等于本地上一版本 cv，否则全量重拉
+    if (!isDepthVersionMatched(currentVersion, payload.lv)) {
+      void resyncFromHttp()
       return
     }
 
@@ -101,14 +125,18 @@ export function useOrderBookDepth(
     currentVersion = ''
   }
 
+  async function loadSnapshot() {
+    const data = await getDepth(getDepthSymbol(getSymbol()), level)
+    resetBook(data.asks ?? [], data.bids ?? [], data.version ?? 0)
+    await subscribeDepthWs()
+  }
+
   async function load() {
     loading.value = true
     error.value = ''
 
     try {
-      const data = await getDepth(getDepthSymbol(getSymbol()), level)
-      resetBook(data.asks ?? [], data.bids ?? [], data.version ?? 0)
-      await subscribeDepthWs()
+      await loadSnapshot()
     }
     catch (e) {
       askBook.clear()
@@ -116,6 +144,7 @@ export function useOrderBookDepth(
       asks.value = []
       bids.value = []
       midPrice.value = ''
+      currentVersion = ''
       error.value = e instanceof ApiError ? e.message : '盘口加载失败'
       unsubscribeDepthWs()
     }
@@ -129,6 +158,7 @@ export function useOrderBookDepth(
   watch(
     () => getSymbol(),
     () => {
+      unsubscribeDepthWs()
       void load()
     },
     { immediate: true },

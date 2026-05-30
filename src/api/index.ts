@@ -68,6 +68,7 @@ export {
   applyDepthSideDelta,
   buildDepthWsTopic,
   depthLevelsFromMap,
+  isDepthVersionMatched,
   levelsToDepthMap,
   parseWsDepthMessage,
   trimDepthLevels,
